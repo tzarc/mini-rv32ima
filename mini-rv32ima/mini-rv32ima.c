@@ -8,8 +8,8 @@
 
 #include "default64mbdtc.h"
 
-// Just default RAM amount is 64MB.
-uint32_t ram_amt = 64*1024*1024;
+// Just default RAM amount is 2kB.
+uint32_t ram_amt = 2048;
 int fail_on_all_faults = 0;
 
 static int64_t SimpleReadNumberInt( const char * number, int64_t defaultNumber );
@@ -75,7 +75,7 @@ int main( int argc, char ** argv )
 				case 'l': param_continue = 1; fixed_update = 1; break;
 				case 'p': param_continue = 1; do_sleep = 0; break;
 				case 's': param_continue = 1; single_step = 1; break;
-				case 'd': param_continue = 1; fail_on_all_faults = 1; break; 
+				case 'd': param_continue = 1; fail_on_all_faults = 1; break;
 				case 't': if( ++i < argc ) time_divisor = SimpleReadNumberInt( argv[i], 1 ); break;
 				default:
 					if( param_continue )
@@ -174,6 +174,7 @@ restart:
 	// The core lives at the end of RAM.
 	core = (struct MiniRV32IMAState *)(ram_image + ram_amt - sizeof( struct MiniRV32IMAState ));
 	core->pc = MINIRV32_RAM_IMAGE_OFFSET;
+	core->regs[5] = 0;
 	core->regs[10] = 0x00; //hart ID
 	core->regs[11] = dtb_ptr?(dtb_ptr+MINIRV32_RAM_IMAGE_OFFSET):0; //dtb_pa (Must be valid pointer) (Should be pointer to dtb)
 	core->extraflags |= 3; // Machine-mode.
@@ -215,6 +216,10 @@ restart:
 			case 3: instct = 0; break;
 			case 0x7777: goto restart;	//syscon code for restart
 			case 0x5555: printf( "POWEROFF@0x%08x%08x\n", core->cycleh, core->cyclel ); return 0; //syscon code for power-off
+			case 0x9999: {
+				printf( "vcall(%d)@0x%08x%08x\n", core->regs[10], core->cycleh, core->cyclel );
+				break;
+			}
 			default: printf( "Unknown failure\n" ); break;
 		}
 	}
@@ -373,7 +378,7 @@ static int IsKBHit()
 	if( is_eofd ) return -1;
 	int byteswaiting;
 	ioctl(0, FIONREAD, &byteswaiting);
-	if( !byteswaiting && write( fileno(stdin), 0, 0 ) != 0 ) { is_eofd = 1; return -1; } // Is end-of-file for 
+	if( !byteswaiting && write( fileno(stdin), 0, 0 ) != 0 ) { is_eofd = 1; return -1; } // Is end-of-file for
 	return !!byteswaiting;
 }
 
@@ -397,22 +402,35 @@ static uint32_t HandleException( uint32_t ir, uint32_t code )
 
 static uint32_t HandleControlStore( uint32_t addy, uint32_t val )
 {
+	/*
 	if( addy == 0x10000000 ) //UART 8250 / 16550 Data Buffer
 	{
 		printf( "%c", val );
 		fflush( stdout );
 	}
+	*/
+	if( addy >= 0x10000000 && addy < 0x10200000 ) {
+		// map to RAM
+	} else if ( addy >= 0x10200000 && addy < 0x11000000 ) {
+		// map to F(S)MC
+	}
 	return 0;
 }
 
-
 static uint32_t HandleControlLoad( uint32_t addy )
 {
+	/*
 	// Emulating a 8250 / 16550 UART
 	if( addy == 0x10000005 )
 		return 0x60 | IsKBHit();
 	else if( addy == 0x10000000 && IsKBHit() )
 		return ReadKBByte();
+	*/
+	if( addy >= 0x10000000 && addy < 0x10200000 ) {
+		// map to RAM
+	} else if ( addy >= 0x10200000 && addy < 0x11000000 ) {
+		// map to F(S)MC
+	}
 	return 0;
 }
 
@@ -492,10 +510,10 @@ static void DumpState( struct MiniRV32IMAState * core, uint8_t * ram_image )
 	if( pc_offset >= 0 && pc_offset < ram_amt - 3 )
 	{
 		ir = *((uint32_t*)(&((uint8_t*)ram_image)[pc_offset]));
-		printf( "[0x%08x] ", ir ); 
+		printf( "[0x%08x] ", ir );
 	}
 	else
-		printf( "[xxxxxxxxxx] " ); 
+		printf( "[xxxxxxxxxx] " );
 	uint32_t * regs = core->regs;
 	printf( "Z:%08x ra:%08x sp:%08x gp:%08x tp:%08x t0:%08x t1:%08x t2:%08x s0:%08x s1:%08x a0:%08x a1:%08x a2:%08x a3:%08x a4:%08x a5:%08x ",
 		regs[0], regs[1], regs[2], regs[3], regs[4], regs[5], regs[6], regs[7],
@@ -504,4 +522,3 @@ static void DumpState( struct MiniRV32IMAState * core, uint8_t * ram_image )
 		regs[16], regs[17], regs[18], regs[19], regs[20], regs[21], regs[22], regs[23],
 		regs[24], regs[25], regs[26], regs[27], regs[28], regs[29], regs[30], regs[31] );
 }
-

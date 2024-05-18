@@ -1,5 +1,5 @@
-__heap_size = 0x1000;
-__stack_size = 0x1000;
+__heap_size = 0x200;
+__stack_size = 0x200;
 
 ENTRY(_start)
 
@@ -80,5 +80,3 @@ SECTIONS
 	PROVIDE( TIMERL = 0x1100bff8 );
 	PROVIDE( TIMERH = 0x1100bffc );
 }
-
-

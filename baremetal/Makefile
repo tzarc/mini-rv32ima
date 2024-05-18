@@ -6,7 +6,7 @@ all : $(TARGETS)
 #PREFIX:=riscv64-unknown-elf-
 #CFLAGS:=-I/usr/include
 
-PREFIX:=../buildroot/output/host/bin/riscv32-buildroot-linux-uclibc-
+PREFIX:=riscv32-unknown-elf-
 CFLAGS:=-fno-stack-protector
 CFLAGS+=-static-libgcc -fdata-sections -ffunction-sections
 CFLAGS+=-g -Os -march=rv32ima_zicsr -mabi=ilp32 -static
@@ -27,4 +27,3 @@ test : $(PROJECT).bin
 
 clean :
 	rm -rf $(TARGETS)
-
