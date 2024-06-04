@@ -34,6 +34,8 @@ static inline uint32_t get_cyc_count() {
 
 int main()
 {
+	asm volatile("ecall");
+
 	lprint("\n");
 	lprint("Hello world from RV32 land.\n");
 	lprint("main is at: ");

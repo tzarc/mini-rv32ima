@@ -210,7 +210,16 @@ restart:
 		int ret = MiniRV32IMAStep( core, ram_image, 0, elapsedUs, instrs_per_flip ); // Execute upto 1024 cycles before breaking out.
 		switch( ret )
 		{
-			case 0: break;
+			case 0:
+				if (core->mcause == 11) // ecall, machine mode
+				{
+					printf( "ECALL@0x%08x%08x\n", core->cycleh, core->cyclel );
+					core->pc = core->mepc + 4;
+					core->mcause = 0;
+					core->mstatus = 0;
+					core->mtval = 0;
+				}
+				break;
 			case 1: if( do_sleep ) MiniSleep(); *this_ccount += instrs_per_flip; break;
 			case 3: instct = 0; break;
 			case 0x7777: goto restart;	//syscon code for restart
